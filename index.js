@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
-const { Manager } = require('moonlink.js');
+const { LavalinkManager } = require('lavalink-client');
 const fs = require('fs');
 
 const client = new Client({
@@ -20,51 +20,45 @@ for (const file of commandFiles) {
   client.commands.set(command.data.name, command);
 }
 
-// Nodes Lavalink publics
-client.manager = new Manager(
-  {
-    nodes: [
-      { host: 'lava-v4.ajieblogs.eu.org', port: 80, password: 'https://dsc.gg/ajidevserver', secure: false },
-      { host: 'lavalinkv3-id.serenetia.com', port: 80, password: 'https://dsc.gg/ajidevserver', secure: false },
-    ],
-    clientName: 'MusicoFlow',
-    sendPayload: (guildId, payload) => {
-      const guild = client.guilds.cache.get(guildId);
-      if (guild) guild.shard.send(JSON.parse(payload));
-    },
-  }
-);
-
-client.manager.on('nodeCreate', node => console.log(`✅ Node connecté: ${node.host}`));
-client.manager.on('nodeError', (node, err) => console.error(`❌ Node erreur: ${node.host}`, err.message));
-client.manager.on('nodeDestroy', node => console.log(`🔴 Node déconnecté: ${node.host}`));
-
-client.manager.on('trackStart', (player, track) => {
-  const channel = client.channels.cache.get(player.textChannelId);
-  if (channel) {
-    const { buildEmbed, buildButtons } = require('./commands/music');
-    channel.send({ embeds: [buildEmbed(track)], components: [buildButtons(false)] })
-      .then(msg => { player.panelMessage = msg; })
-      .catch(() => {});
-  }
+client.lavalink = new LavalinkManager({
+  nodes: [
+    { host: 'lava-v4.ajieblogs.eu.org', port: 80, authorization: 'https://dsc.gg/ajidevserver', secure: false, id: 'node1' },
+  ],
+  sendToShard: (guildId, payload) => {
+    const guild = client.guilds.cache.get(guildId);
+    if (guild) guild.shard.send(payload);
+  },
+  client: { id: process.env.CLIENT_ID, username: 'MusicoFlow' },
 });
 
-client.manager.on('trackEnd', player => {
+client.lavalink.nodeManager.on('connect', node => console.log(`✅ Node connecté: ${node.id}`));
+client.lavalink.nodeManager.on('error', (node, err) => console.error(`❌ Node erreur: ${node.id}`, err.message));
+
+client.lavalink.on('trackStart', (player, track) => {
+  const channel = client.channels.cache.get(player.textChannelId);
+  if (!channel) return;
+  const { buildEmbed, buildButtons } = require('./commands/music');
+  channel.send({ embeds: [buildEmbed(track)], components: [buildButtons(false)] })
+    .then(msg => { player.panelMessage = msg; })
+    .catch(() => {});
+});
+
+client.lavalink.on('trackEnd', player => {
   if (player.panelMessage) {
     player.panelMessage.delete().catch(() => {});
     player.panelMessage = null;
   }
 });
 
-client.once('ready', () => {
+client.once('ready', async () => {
   console.log(`✅ Bot connecté en tant que ${client.user.tag}`);
-  client.manager.init(client.user.id);
+  await client.lavalink.init({ id: client.user.id, username: client.user.username });
 });
 
-client.on('raw', data => client.manager.packetUpdate(data));
+client.on('raw', d => client.lavalink.sendRawData(d));
 
 client.on('interactionCreate', async interaction => {
-  console.log('Interaction reçue:', interaction.type, interaction.commandName || interaction.customId || '');
+  console.log('Interaction:', interaction.type, interaction.commandName || interaction.customId || '');
 
   if (interaction.isChatInputCommand()) {
     const command = client.commands.get(interaction.commandName);
@@ -77,21 +71,13 @@ client.on('interactionCreate', async interaction => {
       interaction.replied ? interaction.followUp(reply) : interaction.reply(reply);
     }
   }
-
   else if (interaction.isButton()) {
-    const musicCommand = client.commands.get('music');
-    if (musicCommand?.handleButton) {
-      try { await musicCommand.handleButton(interaction, client); }
-      catch (err) { console.error(err); }
-    }
+    const cmd = client.commands.get('music');
+    if (cmd?.handleButton) await cmd.handleButton(interaction, client).catch(console.error);
   }
-
   else if (interaction.isModalSubmit()) {
-    const musicCommand = client.commands.get('music');
-    if (musicCommand?.handleModal) {
-      try { await musicCommand.handleModal(interaction, client); }
-      catch (err) { console.error(err); }
-    }
+    const cmd = client.commands.get('music');
+    if (cmd?.handleModal) await cmd.handleModal(interaction, client).catch(console.error);
   }
 });
 

@@ -8,6 +8,6 @@
   "dependencies": {
     "discord.js": "^14.25.1",
     "dotenv": "^16.0.0",
-    "moonlink.js": "^4.0.0"
+    "lavalink-client": "^2.4.0"
   }
 }
