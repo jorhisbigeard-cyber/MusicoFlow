@@ -33,6 +33,9 @@ async function playQuery(query, interaction, client) {
   if (!voiceChannel)
     return interaction.editReply('❌ Tu dois être dans un salon vocal.');
 
+  if (!client.manager.hasReadyNodes())
+    return interaction.editReply('❌ Aucun serveur audio disponible, réessaie dans quelques secondes.');
+
   let player = client.manager.players.get(interaction.guildId);
   if (!player) {
     player = client.manager.create({
