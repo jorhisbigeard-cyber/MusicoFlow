@@ -3,6 +3,10 @@ const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { LavalinkManager } = require('lavalink-client');
 const fs = require('fs');
 
+// Éviter les crashes non gérés
+process.on('unhandledRejection', err => console.error('Unhandled rejection:', err));
+process.on('uncaughtException', err => console.error('Uncaught exception:', err));
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,

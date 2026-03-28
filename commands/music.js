@@ -118,7 +118,9 @@ module.exports = {
 
     if (id === 'pause_resume') {
       await player.pause(!player.paused);
-      await interaction.update({ embeds: [buildEmbed(player.queue.current, player.paused)], components: [buildButtons(player.paused)] });
+      const track = player.queue.current;
+      if (!track) return interaction.reply({ content: '❌ Aucune musique en cours.', ephemeral: true });
+      await interaction.update({ embeds: [buildEmbed(track, player.paused)], components: [buildButtons(player.paused)] });
     }
     else if (id === 'skip') {
       await player.skip();
