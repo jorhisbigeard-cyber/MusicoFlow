@@ -53,6 +53,13 @@ client.lavalink.on('trackEnd', player => {
 client.once('ready', async () => {
   console.log(`✅ Bot connecté en tant que ${client.user.tag}`);
   await client.lavalink.init({ id: client.user.id, username: client.user.username });
+
+  // Statut avec nombre de serveurs
+  const updateStatus = () => {
+    client.user.setActivity(`🎵 ${client.guilds.cache.size} serveurs`, { type: 3 });
+  };
+  updateStatus();
+  setInterval(updateStatus, 60_000);
 });
 
 client.on('raw', d => client.lavalink.sendRawData(d));
