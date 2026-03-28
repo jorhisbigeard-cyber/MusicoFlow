@@ -1,9 +1,7 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
+const { MoonlinkManager } = require('moonlink.js');
 const fs = require('fs');
-
-// Télécharger yt-dlp si pas présent
-require('./setup');
 
 const client = new Client({
   intents: [
@@ -16,53 +14,79 @@ const client = new Client({
 
 client.commands = new Collection();
 
-// Charger les commandes
 const commandFiles = fs.readdirSync('./commands').filter(f => f.endsWith('.js'));
 for (const file of commandFiles) {
   const command = require(`./commands/${file}`);
   client.commands.set(command.data.name, command);
 }
 
+// Nodes Lavalink publics
+client.manager = new MoonlinkManager(
+  [
+    { host: 'lava-v4.ajieblogs.eu.org', port: 80, password: 'https://dsc.gg/ajidevserver', secure: false },
+  ],
+  { clientName: 'MusicoFlow' },
+  (guildId, payload) => {
+    const guild = client.guilds.cache.get(guildId);
+    if (guild) guild.shard.send(JSON.parse(payload));
+  }
+);
+
+client.manager.on('nodeCreate', node => console.log(`✅ Node connecté: ${node.host}`));
+client.manager.on('nodeError', (node, err) => console.error(`❌ Node erreur: ${node.host}`, err));
+
+client.manager.on('trackStart', (player, track) => {
+  const channel = client.channels.cache.get(player.textChannelId);
+  if (channel) {
+    const { buildEmbed, buildButtons } = require('./commands/music');
+    channel.send({ embeds: [buildEmbed(track)], components: [buildButtons(false)] })
+      .then(msg => { player.panelMessage = msg; })
+      .catch(() => {});
+  }
+});
+
+client.manager.on('trackEnd', player => {
+  if (player.panelMessage) {
+    player.panelMessage.delete().catch(() => {});
+    player.panelMessage = null;
+  }
+});
+
 client.once('ready', () => {
   console.log(`✅ Bot connecté en tant que ${client.user.tag}`);
+  client.manager.init(client.user.id);
 });
+
+client.on('raw', data => client.manager.packetUpdate(data));
 
 client.on('interactionCreate', async interaction => {
   console.log('Interaction reçue:', interaction.type, interaction.commandName || interaction.customId || '');
-  // Commandes slash
+
   if (interaction.isChatInputCommand()) {
     const command = client.commands.get(interaction.commandName);
     if (!command) return;
     try {
-      await command.execute(interaction);
+      await command.execute(interaction, client);
     } catch (err) {
       console.error(err);
-      await interaction.reply({ content: '❌ Une erreur est survenue.', ephemeral: true });
+      const reply = { content: '❌ Une erreur est survenue.', ephemeral: true };
+      interaction.replied ? interaction.followUp(reply) : interaction.reply(reply);
     }
   }
 
-  // Boutons du panel music
   else if (interaction.isButton()) {
     const musicCommand = client.commands.get('music');
     if (musicCommand?.handleButton) {
-      try {
-        await musicCommand.handleButton(interaction);
-      } catch (err) {
-        console.error(err);
-        await interaction.reply({ content: '❌ Une erreur est survenue.', ephemeral: true });
-      }
+      try { await musicCommand.handleButton(interaction, client); }
+      catch (err) { console.error(err); }
     }
   }
 
-  // Modal ajouter musique
   else if (interaction.isModalSubmit()) {
     const musicCommand = client.commands.get('music');
     if (musicCommand?.handleModal) {
-      try {
-        await musicCommand.handleModal(interaction);
-      } catch (err) {
-        console.error(err);
-      }
+      try { await musicCommand.handleModal(interaction, client); }
+      catch (err) { console.error(err); }
     }
   }
 });
