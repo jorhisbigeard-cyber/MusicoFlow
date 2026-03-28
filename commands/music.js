@@ -17,8 +17,7 @@ const {
   entersState,
   StreamType,
 } = require('@discordjs/voice');
-const ytDlpExec = require('yt-dlp-exec');
-const { spawn } = require('child_process');
+const { spawn, execFile } = require('child_process');
 const ffmpegPath = require('ffmpeg-static');
 const ytDlpPath = require('../setup');
 
@@ -60,8 +59,6 @@ async function getSongData(query) {
   }
 
   const searchQuery = isUrl ? cleanQuery : `ytsearch1:${cleanQuery}`;
-  const { execFile } = require('child_process');
-
   const info = await new Promise((resolve, reject) => {
     execFile(ytDlpPath, [
       searchQuery,
