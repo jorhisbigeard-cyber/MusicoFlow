@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
-const { MoonlinkManager } = require('moonlink.js');
+const { Manager } = require('moonlink.js');
 const fs = require('fs');
 
 const client = new Client({
@@ -21,14 +21,16 @@ for (const file of commandFiles) {
 }
 
 // Nodes Lavalink publics
-client.manager = new MoonlinkManager(
-  [
-    { host: 'lava-v4.ajieblogs.eu.org', port: 80, password: 'https://dsc.gg/ajidevserver', secure: false },
-  ],
-  { clientName: 'MusicoFlow' },
-  (guildId, payload) => {
-    const guild = client.guilds.cache.get(guildId);
-    if (guild) guild.shard.send(JSON.parse(payload));
+client.manager = new Manager(
+  {
+    nodes: [
+      { host: 'lava-v4.ajieblogs.eu.org', port: 80, password: 'https://dsc.gg/ajidevserver', secure: false },
+    ],
+    clientName: 'MusicoFlow',
+    sendPayload: (guildId, payload) => {
+      const guild = client.guilds.cache.get(guildId);
+      if (guild) guild.shard.send(JSON.parse(payload));
+    },
   }
 );
 
