@@ -1,12 +1,9 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const fs = require('fs');
-const play = require('play-dl');
 
-// Initialiser play-dl
-(async () => {
-  await play.getFreeClientID().then(clientID => play.setToken({ soundcloud: { client_id: clientID } })).catch(() => {});
-})();
+// Télécharger yt-dlp si pas présent
+require('./setup');
 
 const client = new Client({
   intents: [

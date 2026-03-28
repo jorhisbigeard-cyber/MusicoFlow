@@ -17,9 +17,10 @@ const {
   entersState,
   StreamType,
 } = require('@discordjs/voice');
-const play = require('play-dl');
+const ytDlpExec = require('yt-dlp-exec');
 const { spawn } = require('child_process');
 const ffmpegPath = require('ffmpeg-static');
+const ytDlpPath = require('../setup');
 
 const queues = new Map();
 
@@ -45,43 +46,59 @@ function buildButtons(isPaused = false) {
 async function getSongData(query) {
   const isUrl = /^https?:\/\//.test(query);
 
-  let videoUrl;
-  let title, duration, thumbnail;
-
+  let cleanQuery = query;
   if (isUrl) {
-    // Nettoyer les paramètres de playlist
     try {
       const u = new URL(query);
       if (u.hostname.includes('youtube.com')) {
         const v = u.searchParams.get('v');
-        if (v) videoUrl = `https://www.youtube.com/watch?v=${v}`;
-        else videoUrl = query;
+        if (v) cleanQuery = `https://www.youtube.com/watch?v=${v}`;
       } else if (u.hostname === 'youtu.be') {
-        videoUrl = `https://youtu.be${u.pathname}`;
-      } else {
-        videoUrl = query;
+        cleanQuery = `https://youtu.be${u.pathname}`;
       }
-    } catch { videoUrl = query; }
-
-    const info = await play.video_info(videoUrl);
-    title = info.video_details.title;
-    duration = info.video_details.durationRaw;
-    thumbnail = info.video_details.thumbnails?.at(-1)?.url || '';
-  } else {
-    const results = await play.search(query, { limit: 1 });
-    if (!results.length) throw new Error('Aucun résultat');
-    videoUrl = results[0].url;
-    title = results[0].title;
-    duration = results[0].durationRaw;
-    thumbnail = results[0].thumbnails?.at(-1)?.url || '';
+    } catch {}
   }
 
-  return { title, url: videoUrl, duration, thumbnail };
+  const searchQuery = isUrl ? cleanQuery : `ytsearch1:${cleanQuery}`;
+  const { execFile } = require('child_process');
+
+  const info = await new Promise((resolve, reject) => {
+    execFile(ytDlpPath, [
+      searchQuery,
+      '--dump-single-json',
+      '--no-warnings',
+      '--no-playlist',
+      '-f', 'bestaudio/best',
+    ], (err, stdout) => {
+      if (err) return reject(err);
+      try { resolve(JSON.parse(stdout)); } catch (e) { reject(e); }
+    });
+  });
+
+  const entry = info.entries ? info.entries[0] : info;
+  return {
+    title: entry.title,
+    url: entry.webpage_url || entry.original_url || entry.url,
+    audioUrl: entry.url,
+    duration: entry.duration_string || '??:??',
+    thumbnail: entry.thumbnail || '',
+  };
 }
 
-async function createStream(url) {
-  const stream = await play.stream(url);
-  return { stream: stream.stream, type: stream.type };
+function createStream(audioUrl) {
+  const ffmpeg = spawn(ffmpegPath, [
+    '-reconnect', '1',
+    '-reconnect_streamed', '1',
+    '-reconnect_delay_max', '5',
+    '-i', audioUrl,
+    '-f', 's16le',
+    '-ar', '48000',
+    '-ac', '2',
+    'pipe:1',
+  ], { stdio: ['ignore', 'pipe', 'pipe'] });
+  ffmpeg.stderr.on('data', () => {});
+  ffmpeg.on('error', err => console.error('ffmpeg:', err));
+  return ffmpeg.stdout;
 }
 
 async function playNext(guildId, textChannel) {
@@ -101,8 +118,8 @@ async function playNext(guildId, textChannel) {
   const song = queue.songs[0];
 
   try {
-    const { stream, type } = await createStream(song.url);
-    const resource = createAudioResource(stream, { inputType: type });
+    const { stream, type } = await createStream(song.audioUrl || song.url);
+    const resource = createAudioResource(stream, { inputType: StreamType.Raw });
 
     queue.player.play(resource);
     queue.isPaused = false;
