@@ -48,7 +48,8 @@ async function playQuery(query, interaction, client) {
 
   if (!player.connected) await player.connect();
 
-  const res = await client.manager.search(query);
+  const res = await client.manager.search({ query, source: 'ytsearch' });
+  console.log('Search result:', res?.loadType, res?.tracks?.length);
   if (!res || !res.tracks?.length)
     return interaction.editReply('❌ Aucun résultat trouvé.');
 
