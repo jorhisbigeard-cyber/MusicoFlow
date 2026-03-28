@@ -25,6 +25,7 @@ client.manager = new Manager(
   {
     nodes: [
       { host: 'lava-v4.ajieblogs.eu.org', port: 80, password: 'https://dsc.gg/ajidevserver', secure: false },
+      { host: 'lavalinkv3-id.serenetia.com', port: 80, password: 'https://dsc.gg/ajidevserver', secure: false },
     ],
     clientName: 'MusicoFlow',
     sendPayload: (guildId, payload) => {
@@ -35,7 +36,8 @@ client.manager = new Manager(
 );
 
 client.manager.on('nodeCreate', node => console.log(`✅ Node connecté: ${node.host}`));
-client.manager.on('nodeError', (node, err) => console.error(`❌ Node erreur: ${node.host}`, err));
+client.manager.on('nodeError', (node, err) => console.error(`❌ Node erreur: ${node.host}`, err.message));
+client.manager.on('nodeDestroy', node => console.log(`🔴 Node déconnecté: ${node.host}`));
 
 client.manager.on('trackStart', (player, track) => {
   const channel = client.channels.cache.get(player.textChannelId);
