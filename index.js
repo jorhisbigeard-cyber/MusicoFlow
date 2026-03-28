@@ -1,6 +1,12 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const fs = require('fs');
+const play = require('play-dl');
+
+// Initialiser play-dl
+(async () => {
+  await play.getFreeClientID().then(clientID => play.setToken({ soundcloud: { client_id: clientID } })).catch(() => {});
+})();
 
 const client = new Client({
   intents: [
