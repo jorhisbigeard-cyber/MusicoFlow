@@ -59,6 +59,7 @@ async function getSongData(query) {
   }
 
   const searchQuery = isUrl ? cleanQuery : `ytsearch1:${cleanQuery}`;
+  const cookiesPath = require('path').join(__dirname, '..', 'cookies.txt');
   const info = await new Promise((resolve, reject) => {
     execFile(ytDlpPath, [
       searchQuery,
@@ -66,7 +67,7 @@ async function getSongData(query) {
       '--no-warnings',
       '--no-playlist',
       '-f', 'bestaudio/best',
-      '--extractor-args', 'youtube:player_client=web',
+      '--cookies', cookiesPath,
     ], { maxBuffer: 10 * 1024 * 1024 }, (err, stdout) => {
       if (err) return reject(err);
       try { resolve(JSON.parse(stdout)); } catch (e) { reject(e); }
