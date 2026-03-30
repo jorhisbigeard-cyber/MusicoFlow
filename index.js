@@ -27,7 +27,6 @@ for (const file of commandFiles) {
 client.lavalink = new LavalinkManager({
   nodes: [
     { host: 'lava-v4.ajieblogs.eu.org', port: 80, authorization: 'https://dsc.gg/ajidevserver', secure: false, id: 'node1', retryAmount: 10, retryDelay: 5000 },
-    { host: 'lavalinkv3-id.serenetia.com', port: 80, authorization: 'https://dsc.gg/ajidevserver', secure: false, id: 'node2', retryAmount: 10, retryDelay: 5000 },
     { host: 'lavalink.jirayu.net', port: 13592, authorization: 'youshallnotpass', secure: false, id: 'node3', retryAmount: 10, retryDelay: 5000 },
   ],
   sendToShard: (guildId, payload) => {
