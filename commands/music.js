@@ -35,6 +35,11 @@ async function playQuery(query, interaction, client) {
   const voiceChannel = interaction.member.voice.channel;
   if (!voiceChannel) return interaction.editReply('❌ Tu dois être dans un salon vocal.');
 
+  // Vérifier que le node est prêt
+  const nodes = client.lavalink.nodeManager.nodes;
+  const readyNode = [...nodes.values()].find(n => n.connected);
+  if (!readyNode) return interaction.editReply('❌ Serveur audio non disponible, réessaie dans quelques secondes.');
+
   let player = client.lavalink.getPlayer(interaction.guildId);
   if (!player) {
     player = await client.lavalink.createPlayer({
