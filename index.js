@@ -26,17 +26,35 @@ for (const file of commandFiles) {
 
 client.lavalink = new LavalinkManager({
   nodes: [
-    { host: 'lava-v4.ajieblogs.eu.org', port: 80, authorization: 'https://dsc.gg/ajidevserver', secure: false, id: 'node1' },
+    { host: 'lava-v4.ajieblogs.eu.org', port: 80, authorization: 'https://dsc.gg/ajidevserver', secure: false, id: 'node1', retryAmount: 10, retryDelay: 5000 },
+    { host: 'lavalinkv3-id.serenetia.com', port: 80, authorization: 'https://dsc.gg/ajidevserver', secure: false, id: 'node2', retryAmount: 10, retryDelay: 5000 },
+    { host: 'lavalink.jirayu.net', port: 13592, authorization: 'youshallnotpass', secure: false, id: 'node3', retryAmount: 10, retryDelay: 5000 },
   ],
   sendToShard: (guildId, payload) => {
     const guild = client.guilds.cache.get(guildId);
     if (guild) guild.shard.send(payload);
   },
   client: { id: process.env.CLIENT_ID, username: 'MusicoFlow' },
+  playerOptions: {
+    onDisconnect: { autoReconnect: true, destroyPlayer: false },
+    onEmptyQueue: { destroyAfterMs: 30_000 },
+  },
 });
 
 client.lavalink.nodeManager.on('connect', node => console.log(`✅ Node connecté: ${node.id}`));
 client.lavalink.nodeManager.on('error', (node, err) => console.error(`❌ Node erreur: ${node.id}`, err.message));
+client.lavalink.nodeManager.on('disconnect', (node) => console.log(`🔴 Node déconnecté: ${node.id} - reconnexion...`));
+
+client.lavalink.on('playerError', (player, track, err) => {
+  console.error(`Player error sur ${player.guildId}:`, err.message);
+  const channel = client.channels.cache.get(player.textChannelId);
+  if (channel) channel.send('❌ Erreur lors de la lecture, passage à la suivante...').catch(() => {});
+});
+
+client.lavalink.on('trackStuck', (player, track) => {
+  console.warn(`Track stuck sur ${player.guildId}`);
+  player.skip().catch(() => {});
+});
 
 client.lavalink.on('trackStart', (player, track) => {
   const channel = client.channels.cache.get(player.textChannelId);
