@@ -66,7 +66,9 @@ async function playQuery(query, interaction, client) {
   await player.queue.add(track);
 
   if (!player.playing) {
-    const msg = await interaction.editReply({ content: '🔍 Chargement...' });
+    const { buildEmbed, buildButtons } = require('./commands/music');
+    const tempTrack = { info: { title: track.info?.title || 'Chargement...', uri: track.info?.uri || '', artworkUrl: track.info?.artworkUrl || '', duration: track.info?.duration || 0 } };
+    const msg = await interaction.editReply({ embeds: [buildEmbed(tempTrack)], components: [buildButtons()] });
     player.panelMessage = msg;
     await player.play({ paused: false });
   } else {
