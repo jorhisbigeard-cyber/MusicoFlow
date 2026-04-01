@@ -132,7 +132,9 @@ module.exports = {
       await interaction.reply({ content: '⏭️ Musique passée.', ephemeral: true });
     }
     else if (id === 'stop') {
-      await player.destroy();
+      try {
+        await player.destroy();
+      } catch {}
       await interaction.update({ embeds: [new EmbedBuilder().setColor(0xe74c3c).setTitle('⏹️ Arrêté').setDescription('File vidée.')], components: [] });
     }
     else if (id === 'queue') {
