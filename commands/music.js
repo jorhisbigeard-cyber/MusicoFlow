@@ -67,7 +67,7 @@ async function playQuery(query, interaction, client) {
 
   if (!player.playing) {
     await player.play({ paused: false });
-    await interaction.editReply({ content: `▶️ Lecture lancée !` });
+    await interaction.editReply({ content: '✅ Recherche en cours...' });
   } else {
     await interaction.editReply({
       embeds: [new EmbedBuilder().setColor(0x5865f2).setTitle('➕ Ajouté à la file')
