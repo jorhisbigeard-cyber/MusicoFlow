@@ -66,9 +66,9 @@ async function playQuery(query, interaction, client) {
   await player.queue.add(track);
 
   if (!player.playing) {
-    await player.play({ paused: false });
-    const msg = await interaction.editReply({ content: '🔍 Recherche en cours...' });
+    const msg = await interaction.editReply({ content: '🔍 Chargement...' });
     player.panelMessage = msg;
+    await player.play({ paused: false });
   } else {
     await interaction.editReply({
       embeds: [new EmbedBuilder().setColor(0x5865f2).setTitle('➕ Ajouté à la file')
