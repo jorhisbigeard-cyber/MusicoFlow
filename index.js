@@ -28,7 +28,6 @@ client.lavalink = new LavalinkManager({
   nodes: [
     { host: 'lava-v4.ajieblogs.eu.org', port: 80, authorization: 'https://dsc.gg/ajidevserver', secure: false, id: 'node1', retryAmount: 5, retryDelay: 10000 },
     { host: 'lavalink.jirayu.net', port: 13592, authorization: 'youshallnotpass', secure: false, id: 'node3', retryAmount: 5, retryDelay: 10000 },
-    { host: 'lava.link', port: 80, authorization: 'discloud', secure: false, id: 'node4', retryAmount: 5, retryDelay: 10000 },
   ],
   sendToShard: (guildId, payload) => {
     const guild = client.guilds.cache.get(guildId);
@@ -57,6 +56,7 @@ client.lavalink.on('trackStuck', (player, track) => {
 });
 
 client.lavalink.on('trackStart', (player, track) => {
+  console.log(`▶️ Track start: ${track.info?.title} sur guild ${player.guildId} | voiceChannel: ${player.voiceChannelId} | connected: ${player.connected}`);
   const channel = client.channels.cache.get(player.textChannelId);
   if (!channel) return;
   const { buildEmbed, buildButtons } = require('./commands/music');
