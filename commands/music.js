@@ -161,9 +161,10 @@ async function addAndPlay(query, voiceChannel, guildId, guild, channel) {
     queue = { connection, player, songs: [], panelMessage: null, isPaused: false };
     queues.set(guildId, queue);
     try {
-      await entersState(connection, VoiceConnectionStatus.Ready, 10_000);
+      await entersState(connection, VoiceConnectionStatus.Ready, 30_000);
     } catch {
       queues.delete(guildId);
+      connection.destroy();
       throw new Error('Impossible de rejoindre le salon vocal.');
     }
   }
