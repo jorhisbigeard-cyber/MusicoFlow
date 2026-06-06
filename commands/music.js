@@ -72,7 +72,7 @@ async function playQuery(query, interaction, client) {
   console.log('Searching:', search);
 
   const res = await player.search({ query: search }, interaction.user);
-  console.log('Result:', res?.loadType, res?.tracks?.length);
+  console.log('Result:', res?.loadType, res?.tracks?.length, '| node:', player.node?.id);
 
   if (!res || !res.tracks?.length) return interaction.editReply('❌ Aucun résultat trouvé.');
 
