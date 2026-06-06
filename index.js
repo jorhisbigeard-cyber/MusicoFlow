@@ -26,7 +26,7 @@ for (const file of commandFiles) {
 
 client.lavalink = new LavalinkManager({
   nodes: [
-    { host: 'jorhis-musicoflow-lavalink.hf.space', port: 443, authorization: 'musicoflow', secure: true, id: 'hf-node', retryAmount: 5, retryDelay: 10000 },
+    { host: 'jorhis-musicoflow-lavalink.hf.space', port: 443, authorization: 'musicoflow', secure: true, id: 'hf-node', retryAmount: 5, retryDelay: 10000, requestTimeout: 30000 },
   ],
   sendToShard: (guildId, payload) => {
     const guild = client.guilds.cache.get(guildId);
