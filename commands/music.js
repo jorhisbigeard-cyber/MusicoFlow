@@ -51,7 +51,21 @@ async function playQuery(query, interaction, client) {
     });
   }
 
-  if (!player.connected) await player.connect();
+  if (!player.connected) {
+    await player.connect();
+    // Attendre que la connexion soit établie
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Timeout connexion vocale')), 10000);
+      const check = setInterval(() => {
+        if (player.connected) {
+          clearInterval(check);
+          clearTimeout(timeout);
+          resolve();
+        }
+      }, 100);
+    });
+    console.log('Player connecté:', player.connected);
+  }
 
   const isUrl = /^https?:\/\//.test(query);
   const search = isUrl ? query : `ytsearch:${query}`;
