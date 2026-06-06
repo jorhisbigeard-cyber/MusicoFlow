@@ -59,7 +59,6 @@ client.lavalink.on('trackStart', (player, track) => {
   const channel = client.channels.cache.get(player.textChannelId);
   if (!channel) return;
   const { buildEmbed, buildButtons } = require('./commands/music');
-  // Éditer le message existant si possible, sinon en envoyer un nouveau
   if (player.panelMessage) {
     player.panelMessage.edit({ embeds: [buildEmbed(track)], components: [buildButtons(false)] }).catch(() => {
       channel.send({ embeds: [buildEmbed(track)], components: [buildButtons(false)] })
@@ -69,6 +68,25 @@ client.lavalink.on('trackStart', (player, track) => {
     channel.send({ embeds: [buildEmbed(track)], components: [buildButtons(false)] })
       .then(msg => { player.panelMessage = msg; }).catch(() => {});
   }
+
+  // Watchdog anti-freeze : si position bloquée 30s → skip
+  let lastPosition = -1;
+  let frozenCount = 0;
+  if (player._watchdog) clearInterval(player._watchdog);
+  player._watchdog = setInterval(() => {
+    if (!player.playing) { clearInterval(player._watchdog); return; }
+    if (player.position === lastPosition) {
+      frozenCount++;
+      if (frozenCount >= 3) {
+        console.warn(`Freeze détecté sur ${player.guildId}, skip...`);
+        player.skip().catch(() => player.destroy().catch(() => {}));
+        clearInterval(player._watchdog);
+      }
+    } else {
+      frozenCount = 0;
+      lastPosition = player.position;
+    }
+  }, 10_000);
 });
 
 client.lavalink.on('trackEnd', player => {
