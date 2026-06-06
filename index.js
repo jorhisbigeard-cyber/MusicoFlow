@@ -1,9 +1,8 @@
 require('dotenv').config();
+require('./setup');
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
-const { LavalinkManager } = require('lavalink-client');
 const fs = require('fs');
 
-// Éviter les crashes non gérés
 process.on('unhandledRejection', err => console.error('Unhandled rejection:', err));
 process.on('uncaughtException', err => console.error('Uncaught exception:', err));
 
@@ -24,83 +23,8 @@ for (const file of commandFiles) {
   client.commands.set(command.data.name, command);
 }
 
-client.lavalink = new LavalinkManager({
-  nodes: [
-    { host: 'lava-v4.ajieblogs.eu.org', port: 80, authorization: 'https://dsc.gg/ajidevserver', secure: false, id: 'node1', retryAmount: 5, retryDelay: 10000 },
-    { host: 'lavalink.jirayu.net', port: 13592, authorization: 'youshallnotpass', secure: false, id: 'node2', retryAmount: 5, retryDelay: 10000 },
-    { host: 'jorhis-musicoflow-lavalink.hf.space', port: 443, authorization: 'musicoflow', secure: true, id: 'hf-node', retryAmount: 5, retryDelay: 10000, requestTimeout: 30000 },
-  ],
-  sendToShard: (guildId, payload) => {
-    const guild = client.guilds.cache.get(guildId);
-    if (guild) guild.shard.send(payload);
-  },
-  client: { id: process.env.CLIENT_ID, username: 'MusicoFlow' },
-  playerOptions: {
-    onDisconnect: { autoReconnect: true, destroyPlayer: false },
-    onEmptyQueue: { destroyAfterMs: 30_000 },
-  },
-});
-
-client.lavalink.nodeManager.on('connect', node => console.log(`✅ Node connecté: ${node.id}`));
-client.lavalink.nodeManager.on('error', (node, err) => console.error(`❌ Node erreur: ${node.id}`, err.message));
-client.lavalink.nodeManager.on('disconnect', (node) => console.log(`🔴 Node déconnecté: ${node.id} - reconnexion...`));
-
-client.lavalink.on('playerError', (player, track, err) => {
-  console.error(`Player error sur ${player.guildId}:`, err.message);
-  const channel = client.channels.cache.get(player.textChannelId);
-  if (channel) channel.send('❌ Erreur lors de la lecture, passage à la suivante...').catch(() => {});
-});
-
-client.lavalink.on('trackStuck', (player, track) => {
-  console.warn(`Track stuck sur ${player.guildId}`);
-  player.skip().catch(() => {});
-});
-
-client.lavalink.on('trackStart', (player, track) => {
-  console.log(`▶️ Track start: ${track.info?.title} sur guild ${player.guildId} | voiceChannel: ${player.voiceChannelId} | connected: ${player.connected}`);
-  const channel = client.channels.cache.get(player.textChannelId);
-  if (!channel) return;
-  const { buildEmbed, buildButtons } = require('./commands/music');
-  if (player.panelMessage) {
-    player.panelMessage.edit({ embeds: [buildEmbed(track)], components: [buildButtons(false)] }).catch(() => {
-      channel.send({ embeds: [buildEmbed(track)], components: [buildButtons(false)] })
-        .then(msg => { player.panelMessage = msg; }).catch(() => {});
-    });
-  } else {
-    channel.send({ embeds: [buildEmbed(track)], components: [buildButtons(false)] })
-      .then(msg => { player.panelMessage = msg; }).catch(() => {});
-  }
-
-  // Watchdog anti-freeze : si position bloquée 30s → skip
-  let lastPosition = -1;
-  let frozenCount = 0;
-  if (player._watchdog) clearInterval(player._watchdog);
-  player._watchdog = setInterval(() => {
-    if (!player.playing) { clearInterval(player._watchdog); return; }
-    if (player.position === lastPosition) {
-      frozenCount++;
-      if (frozenCount >= 3) {
-        console.warn(`Freeze détecté sur ${player.guildId}, skip...`);
-        player.skip().catch(() => player.destroy().catch(() => {}));
-        clearInterval(player._watchdog);
-      }
-    } else {
-      frozenCount = 0;
-      lastPosition = player.position;
-    }
-  }, 10_000);
-});
-
-client.lavalink.on('trackEnd', player => {
-  if (player.panelMessage) {
-    player.panelMessage.delete().catch(() => {});
-    player.panelMessage = null;
-  }
-});
-
 client.once('ready', async () => {
   console.log(`✅ Bot connecté en tant que ${client.user.tag}`);
-  await client.lavalink.init({ id: client.user.id, username: client.user.username });
 
   // Déployer les commandes slash automatiquement
   try {
@@ -118,22 +42,12 @@ client.once('ready', async () => {
     console.error('Erreur déploiement commandes:', err.message);
   }
 
-  // Statut avec nombre de serveurs
+  // Statut
   const updateStatus = () => {
     client.user.setActivity(`🎵 ${client.guilds.cache.size} serveurs`, { type: 3 });
   };
   updateStatus();
   setInterval(updateStatus, 60_000);
-});
-
-client.on('raw', d => client.lavalink.sendRawData(d));
-client.ws.on('VOICE_STATE_UPDATE', d => {
-  console.log('VOICE_STATE_UPDATE reçu:', d.guild_id, d.user_id);
-  client.lavalink.sendRawData({ t: 'VOICE_STATE_UPDATE', d });
-});
-client.ws.on('VOICE_SERVER_UPDATE', d => {
-  console.log('VOICE_SERVER_UPDATE reçu:', d.guild_id);
-  client.lavalink.sendRawData({ t: 'VOICE_SERVER_UPDATE', d });
 });
 
 client.on('interactionCreate', async interaction => {
@@ -143,20 +57,20 @@ client.on('interactionCreate', async interaction => {
     const command = client.commands.get(interaction.commandName);
     if (!command) return;
     try {
-      await command.execute(interaction, client);
+      await command.execute(interaction);
     } catch (err) {
       console.error(err);
       const reply = { content: '❌ Une erreur est survenue.', ephemeral: true };
-      interaction.replied ? interaction.followUp(reply) : interaction.reply(reply);
+      try { interaction.replied || interaction.deferred ? interaction.followUp(reply) : interaction.reply(reply); } catch {}
     }
   }
   else if (interaction.isButton()) {
     const cmd = client.commands.get('music');
-    if (cmd?.handleButton) await cmd.handleButton(interaction, client).catch(console.error);
+    if (cmd?.handleButton) await cmd.handleButton(interaction).catch(console.error);
   }
   else if (interaction.isModalSubmit()) {
     const cmd = client.commands.get('music');
-    if (cmd?.handleModal) await cmd.handleModal(interaction, client).catch(console.error);
+    if (cmd?.handleModal) await cmd.handleModal(interaction).catch(console.error);
   }
 });
 
