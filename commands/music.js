@@ -142,14 +142,7 @@ async function playNext(guildId, textChannel) {
 }
 
 async function addAndPlay(query, voiceChannel, guildId, guild, channel) {
-  let songData;
-  try {
-    songData = await getSongData(query);
-  } catch (err) {
-    console.error('getSongData error:', err.message);
-    throw new Error('Impossible de trouver cette musique.');
-  }
-
+  // Rejoindre le salon vocal EN PREMIER avant de chercher
   let queue = queues.get(guildId);
   if (!queue) {
     const connection = joinVoiceChannel({
@@ -167,6 +160,15 @@ async function addAndPlay(query, voiceChannel, guildId, guild, channel) {
       connection.destroy();
       throw new Error('Impossible de rejoindre le salon vocal.');
     }
+  }
+
+  // Chercher la musique APRÈS connexion
+  let songData;
+  try {
+    songData = await getSongData(query);
+  } catch (err) {
+    console.error('getSongData error:', err.message);
+    throw new Error('Impossible de trouver cette musique.');
   }
 
   queue.songs.push(songData);
