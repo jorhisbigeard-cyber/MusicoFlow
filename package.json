@@ -11,7 +11,6 @@
     "dotenv": "^16.0.0",
     "ffmpeg-static": "^5.3.0",
     "libsodium-wrappers": "^0.8.2",
-    "opusscript": "^0.0.8",
-    "yt-dlp-exec": "^1.0.2"
+    "opusscript": "^0.0.8"
   }
 }
