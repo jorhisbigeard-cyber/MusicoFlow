@@ -125,8 +125,14 @@ client.once('ready', async () => {
 });
 
 client.on('raw', d => client.lavalink.sendRawData(d));
-client.ws.on('VOICE_STATE_UPDATE', d => client.lavalink.sendRawData({ t: 'VOICE_STATE_UPDATE', d }));
-client.ws.on('VOICE_SERVER_UPDATE', d => client.lavalink.sendRawData({ t: 'VOICE_SERVER_UPDATE', d }));
+client.ws.on('VOICE_STATE_UPDATE', d => {
+  console.log('VOICE_STATE_UPDATE reçu:', d.guild_id, d.user_id);
+  client.lavalink.sendRawData({ t: 'VOICE_STATE_UPDATE', d });
+});
+client.ws.on('VOICE_SERVER_UPDATE', d => {
+  console.log('VOICE_SERVER_UPDATE reçu:', d.guild_id);
+  client.lavalink.sendRawData({ t: 'VOICE_SERVER_UPDATE', d });
+});
 
 client.on('interactionCreate', async interaction => {
   console.log('Interaction:', interaction.type, interaction.commandName || interaction.customId || '');
