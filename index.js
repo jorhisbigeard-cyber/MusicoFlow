@@ -26,6 +26,24 @@ for (const file of commandFiles) {
 client.once('ready', async () => {
   console.log(`✅ Bot connecté en tant que ${client.user.tag}`);
 
+  // Vérifier libsodium
+  try {
+    const sodium = require('libsodium-wrappers');
+    await sodium.ready;
+    console.log('✅ libsodium-wrappers chargé.');
+  } catch (err) {
+    console.error('❌ libsodium-wrappers erreur:', err.message);
+  }
+
+  // Vérifier @discordjs/voice
+  try {
+    const voice = require('@discordjs/voice');
+    console.log('✅ @discordjs/voice chargé.');
+    console.log(voice.generateDependencyReport());
+  } catch (err) {
+    console.error('❌ @discordjs/voice erreur:', err.message);
+  }
+
   // Déployer les commandes slash automatiquement
   try {
     const { REST, Routes } = require('discord.js');
